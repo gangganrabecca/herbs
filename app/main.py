@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 import torch
 from transformers import CLIPModel, CLIPProcessor
+from huggingface_hub import snapshot_download
 from pathlib import Path
 import os
 import uvicorn
@@ -302,15 +303,39 @@ for herb in CATALOG:
 
 # Load CLIP lazily to reduce startup memory
 DEVICE = "cpu"
-MODEL_NAME = "openai/clip-vit-base-patch32"
+MODEL_NAME = os.getenv("MODEL_NAME", "openai/clip-vit-base-patch32").strip() or "openai/clip-vit-base-patch32"
 clip_model = None
 clip_processor = None
 
 def _ensure_model_loaded():
     global clip_model, clip_processor
     if clip_model is None or clip_processor is None:
-        m = CLIPModel.from_pretrained(MODEL_NAME)
-        p = CLIPProcessor.from_pretrained(MODEL_NAME)
+        # Prefer local model directory if provided
+        local_dir = os.getenv("CLIP_LOCAL_DIR", "").strip()
+        model_source = None
+        if local_dir:
+            try:
+                m = CLIPModel.from_pretrained(local_dir, local_files_only=True)
+                p = CLIPProcessor.from_pretrained(local_dir, local_files_only=True)
+                model_source = local_dir
+            except Exception:
+                # Fallback to MODEL_NAME; may still try network if cache exists
+                pass
+        if model_source is None:
+            # Try to resolve into a local snapshot directory to avoid repeated downloads
+            try:
+                snapshot_path = snapshot_download(
+                    repo_id=MODEL_NAME,
+                    local_dir=str(Path(__file__).parent / "models" / "clip"),
+                    local_dir_use_symlinks=False,
+                    resume_download=True,
+                    allow_patterns=["*.json", "*.bin", "*.txt"],
+                )
+                m = CLIPModel.from_pretrained(snapshot_path, local_files_only=True)
+                p = CLIPProcessor.from_pretrained(snapshot_path, local_files_only=True)
+                model_source = snapshot_path
+            except Exception as e:
+                raise HTTPException(status_code=503, detail=f"Model files not available offline and download failed: {e}")
         m = m.to(DEVICE)
         m.eval()
         clip_model = m

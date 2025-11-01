@@ -37,3 +37,6 @@ Thumbs.db
 
 # Misc
 *.sqlite3
+ 
+# Local ML models (do not commit large weights)
+app/models/
