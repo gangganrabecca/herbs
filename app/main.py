@@ -15,6 +15,8 @@ from pathlib import Path
 import os
 import uvicorn
 
+torch.set_num_threads(1)
+
 app = FastAPI(title="Herbal Plant Identifier", version="0.1.0")
 
 # CORS (allow local dev)
@@ -298,12 +300,21 @@ for herb in CATALOG:
             CANDIDATE_META.append(herb)
 
 
-# Load CLIP (once)
+# Load CLIP lazily to reduce startup memory
 DEVICE = "cpu"
 MODEL_NAME = "openai/clip-vit-base-patch32"
-clip_model: CLIPModel = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
-clip_processor: CLIPProcessor = CLIPProcessor.from_pretrained(MODEL_NAME)
-clip_model.eval()
+clip_model = None
+clip_processor = None
+
+def _ensure_model_loaded():
+    global clip_model, clip_processor
+    if clip_model is None or clip_processor is None:
+        m = CLIPModel.from_pretrained(MODEL_NAME)
+        p = CLIPProcessor.from_pretrained(MODEL_NAME)
+        m = m.to(DEVICE)
+        m.eval()
+        clip_model = m
+        clip_processor = p
 
 def _softmax(x: torch.Tensor) -> torch.Tensor:
     x_max = torch.max(x)
@@ -312,6 +323,7 @@ def _softmax(x: torch.Tensor) -> torch.Tensor:
 
 
 def _classify_image(image: Image.Image, top_k: int = 3):
+    _ensure_model_loaded()
     with torch.no_grad():
         inputs = clip_processor(text=CANDIDATE_TEXTS, images=image, return_tensors="pt", padding=True).to(DEVICE)
         outputs = clip_model(**inputs)
