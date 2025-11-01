@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Herbal Plant Identifier</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="logo">🌿 HerbFinder</div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h1>Herbal Plant Real‑Time Detection</h1>
+      <p class="muted">Upload a plant photo. We’ll guess the herb and show useful details.</p>
+
+      <form id="upload-form" class="uploader">
+        <label class="drop" id="drop-area">
+          <input id="file-input" type="file" accept="image/*" hidden />
+          <div class="drop-inner">
+            <div class="emoji">🍃</div>
+            <div>
+              <strong>Click to choose</strong> or drag & drop an image
+            </div>
+            <div class="hint">JPG, PNG. No data is stored.</div>
+          </div>
+        </label>
+        <button id="analyze-btn" class="btn" type="submit" disabled>Analyze</button>
+      </form>
+
+      <div id="preview" class="preview hidden">
+        <img id="preview-img" alt="preview" />
+      </div>
+
+      <div class="controls">
+        <div class="picker">
+          <label for="herb-picker">Manual pick:</label>
+          <select id="herb-picker">
+            <option value="">-- Select herb --</option>
+          </select>
+          <button id="use-herb-btn" class="btn secondary" type="button">Show details</button>
+        </div>
+        <div class="more">
+          <button id="show-more-btn" class="btn secondary" type="button">Show more (top 10)</button>
+        </div>
+      </div>
+
+      <div id="results" class="results hidden"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Made with 💚 using FastAPI + CLIP (zero‑shot)</span>
+  </footer>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
