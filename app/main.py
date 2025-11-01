@@ -299,8 +299,8 @@ for herb in CATALOG:
 
 
 # Load CLIP (once)
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-MODEL_NAME = "laion/CLIP-ViT-B-32-laion2B-s34B-b79K"
+DEVICE = "cpu"
+MODEL_NAME = "openai/clip-vit-base-patch32"
 clip_model: CLIPModel = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
 clip_processor: CLIPProcessor = CLIPProcessor.from_pretrained(MODEL_NAME)
 clip_model.eval()
@@ -349,13 +349,8 @@ async def health():
 
 @app.on_event("startup")
 async def warmup():
-    # Build model caches so first real request is faster
-    try:
-        img = Image.new("RGB", (32, 32), (255, 255, 255))
-        _ = _classify_image(img, top_k=1)
-    except Exception:
-        # Ignore warmup errors to not block startup
-        pass
+    # Avoid heavy warmup on low-memory environments
+    pass
 
 
 def _read_image_from_request_sync(data: bytes):
